@@ -26,7 +26,7 @@ def test_create_db(setup_database, connection):
     cursor = connection.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users';")
     table_exists = cursor.fetchone()
-    assert table_exists, "'users' tablosu veri tabanında bulunmalıdır."
+    assert table_exists, "The 'users' table should exist in the database."
 
 def test_add_new_user(setup_database, connection):
     """Yeni bir kullanıcının eklenmesini test eder."""
@@ -34,13 +34,32 @@ def test_add_new_user(setup_database, connection):
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM users WHERE username='testuser';")
     user = cursor.fetchone()
-    assert user, "Kullanıcı veri tabanına eklenmiş olmalıdır."
+    assert user, "The user should be added to the database."
 
-# İşte yazabileceğiniz bazı testler:
-"""
-Var olan bir kullanıcı adıyla kullanıcı eklemeye çalışmayı test etme.
-Başarılı kullanıcı doğrulamasını test etme.
-Var olmayan bir kullanıcıyla doğrulama yapmayı test etme.
-Yanlış şifreyle doğrulama yapmayı test etme.
-Kullanıcı listesinin doğru şekilde görüntülenmesini test etme.
-"""
+def test_add_existing_user(setup_database):
+    """Var olan bir kullanıcı adıyla kullanıcı eklemeye çalışmayı test eder"""
+    add_user('existinguser', 'existinguser@example.com', 'password123')
+    response = add_user('existinguser', 'existinguser2@example.com', 'password1234') 
+    assert not response, "Aynı kullanıcı adına sahip kullanıcı kaydedilmemelidir."
+
+def test_authenticate_user_success(setup_database):
+    """Başarılı kullanıcı doğrulamasını test eder."""
+    add_user('testauth', 'testauth@example.com', 'password123')
+    assert authenticate_user('testauth', 'password123') == True
+
+def test_authenticate_nonexistent_user(setup_database):
+    """Var olmayan kullanıcıyla doğrulama yapmayı test eder."""
+    assert authenticate_user('nonexistentuser', 'password') == False
+
+def test_authenticate_user_wrong_password(setup_database):
+    """Yanlış şifreyle doğrulama yapmayı test eder."""
+    add_user('wrongpass', 'wrongpass@example.com', 'password123')
+    assert authenticate_user('wrongpass', 'wrongpassword') == False
+
+def test_display_users(setup_database, capsys):
+    """Kullanıcı listesinin doğru şekilde görüntülenmesini test etme."""
+    add_user('displaytest', 'displaytest@example.com', 'password123')
+    display_users()
+    captured = capsys.readouterr()
+    assert 'displaytest' in captured.out, "Görüntüleme fonksiyonu kullanıcı adlarını çıktı vermelidir."
+    assert 'password123' not in captured.out, "Şifreler çıktı verilmemelidir."
